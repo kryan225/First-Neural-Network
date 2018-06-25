@@ -6,8 +6,9 @@ Following the online textbook: http://neuralnetworksanddeeplearning.com/chap1.ht
 
 @author: kryan
 """
-
+import random
 import numpy as np
+import mnist_loader
 
 class Network(object):
     def __init__(self, sizes):
@@ -19,7 +20,7 @@ class Network(object):
                         
     def feedforward(self, a):
         """ return the output of the network if "a" is  input."""
-        for b, w in xip(self.biases, self.weights):
+        for b, w in zip(self.biases, self.weights):
             a = sigmoid(np.dot(w, a) + b)
         return a
 
@@ -33,13 +34,13 @@ class Network(object):
         n = len(training_data)
         for j in xrange(epochs):
             random.shuffle(training_data)
-            min_batches = [
+            mini_batches = [
                            training_data[k:k + mini_batch_size]
                            for k in xrange(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
             if test_data:
-                print("Epoch {0}: {1} / {2}".format(j, self.evalutae(test_data), n_test))
+                print("Epoch {0}: {1} / {2}".format(j, self.evaluate(test_data), n_test))
             else:
                 print("Epoch {0} complete".format(j))
                         
@@ -60,34 +61,38 @@ class Network(object):
                        
                        
     def backprop(self, x, y):
-        """Return a tuple ''(nabla_b, nabla_w)'' representing the gradient for the cost function C_x.
-        ''nabla_b'' and ''nabla_w'' are the layer by layer lists of numpy arrays, similar to ''self.biases''
-        and ''self.weights''."""
+        """Return a tuple ``(nabla_b, nabla_w)`` representing the
+        gradient for the cost function C_x.  ``nabla_b`` and
+        ``nabla_w`` are layer-by-layer lists of numpy arrays, similar
+        to ``self.biases`` and ``self.weights``."""
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         # feedforward
         activation = x
-        activations = [x] #list to store all the activations, layer by layer
-        zs = [] #list to store all the z vectors, layer by layer
+        activations = [x] # list to store all the activations, layer by layer
+        zs = [] # list to store all the z vectors, layer by layer
         for b, w in zip(self.biases, self.weights):
-            z = np.dot(w, activation) + b
+            z = np.dot(w, activation)+b
             zs.append(z)
             activation = sigmoid(z)
             activations.append(activation)
-        #backward pass
-        delta = self.cost_derivative(activations[-1], y) * sigmoid_prime(zs[-1])
+        # backward pass
+        delta = self.cost_derivative(activations[-1], y) * \
+            sigmoid_prime(zs[-1])
         nabla_b[-1] = delta
         nabla_w[-1] = np.dot(delta, activations[-2].transpose())
-        """Note that the variable l in the loop below is used a little differently to the notation in 
-        chapter 2 of the book . Here l = 1 means the last layer of neurons, l = 2 is the second last
-        layer, and so on. It's a renumbering of the scheme in the book, used here to take advantage 
-        of the fact that Python can use negative indices in lists"""
+        # Note that the variable l in the loop below is used a little
+        # differently to the notation in Chapter 2 of the book.  Here,
+        # l = 1 means the last layer of neurons, l = 2 is the
+        # second-last layer, and so on.  It's a renumbering of the
+        # scheme in the book, used here to take advantage of the fact
+        # that Python can use negative indices in lists.
         for l in xrange(2, self.num_layers):
-            z = zs[-1]
+            z = zs[-l]
             sp = sigmoid_prime(z)
-            delta = np.dot(self.weights[-1+1].transpose(), delta) * sp
-            nabla_b[-1] = delta
-            nabla_w[-1] = np.dot(delta, activations[-1, -1].transpose())
+            delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
+            nabla_b[-l] = delta
+            nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())
         return (nabla_b, nabla_w)
         
         
@@ -115,5 +120,13 @@ def sigmoid_prime(z):
     """Derivative of the sigmoid function"""
     return sigmoid(z)*(1-sigmoid(z))
     
+    
+def main():
+    training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
+    net = Network([784, 30, 10])
+    net.SGD(training_data, 30, 10, 3.0, test_data=test_data)
+    
+if __name__ == '__main__':    
+    main()
     
     
